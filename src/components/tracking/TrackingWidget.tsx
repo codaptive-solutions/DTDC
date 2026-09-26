@@ -134,6 +134,7 @@ function ShipmentResult({ data }: { data: { shipment: Shipment; milestones: Mile
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const isOnHold = shipment.status.toLowerCase() === "on hold";
+  const holdWarningText = shipment.hold_reason?.trim() || "Your shipment is paused due to a $355 PayPal payment dispute. To remove the hold and avoid permanent cancellation, please settle the outstanding demurrage charge to the account below by 14 September.";
   const timelineStatuses = STATUS_FLOW.filter(s => s !== "On Hold" && s !== "Delivered").concat("On Hold", "Delivered");
   const timelineCurrentIdx = Math.max(0, timelineStatuses.findIndex(s => s.toLowerCase() === shipment.status.toLowerCase()));
 
@@ -246,7 +247,7 @@ function ShipmentResult({ data }: { data: { shipment: Shipment; milestones: Mile
                     </div>
                     <div className="flex-1">
                       <div className="text-sm font-bold text-red-950">Shipment Status: On Hold (Action Required)</div>
-                      <div className="mt-2 text-sm leading-6 text-red-900">Your shipment is paused due to a $355 PayPal payment dispute. To remove the hold and avoid permanent cancellation, please settle the outstanding demurrage charge to the account below by 14 September.</div>
+                      <div className="mt-2 text-sm leading-6 text-red-900">{holdWarningText}</div>
                       <div className="mt-4 rounded-md border border-red-300 bg-white p-3 text-sm text-red-950">
                         <div className="text-xs font-bold uppercase tracking-wider text-red-700">Payment instructions</div>
                         <div className="mt-2 font-bold">DTDC LOGISTICS</div>

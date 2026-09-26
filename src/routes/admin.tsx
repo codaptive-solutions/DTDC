@@ -143,7 +143,7 @@ function CreateTab({ onCreated }: { onCreated: () => void }) {
   const [form, setForm] = useState({
     tracking_number: "", sender_company: "", receiver_company: "",
     origin: "", destination: "", is_overseas: false, status: "Booked" as string,
-    weight_kg: 100, estimated_delivery: "",
+    hold_reason: "", weight_kg: 100, estimated_delivery: "",
   });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -157,6 +157,7 @@ function CreateTab({ onCreated }: { onCreated: () => void }) {
       ...form,
       tracking_number: (form.tracking_number || generateAWB(form.is_overseas)).toUpperCase(),
       estimated_delivery: form.estimated_delivery || null,
+      hold_reason: form.status === "On Hold" ? (form.hold_reason || null) : null,
     };
     const { data, error } = await supabase.from("shipments").insert(payload).select().single();
     if (error) { setMsg("Error: " + error.message); setBusy(false); return; }
@@ -166,7 +167,7 @@ function CreateTab({ onCreated }: { onCreated: () => void }) {
       status_text: `Consignment ${form.status.toLowerCase()} — manifest generated`,
     });
     setMsg(`✓ Consignment ${payload.tracking_number} created.`);
-    setForm({ tracking_number: "", sender_company: "", receiver_company: "", origin: "", destination: "", is_overseas: false, status: "Booked", weight_kg: 100, estimated_delivery: "" });
+    setForm({ tracking_number: "", sender_company: "", receiver_company: "", origin: "", destination: "", is_overseas: false, status: "Booked", hold_reason: "", weight_kg: 100, estimated_delivery: "" });
     onCreated(); setBusy(false);
   }
 
@@ -195,6 +196,11 @@ function CreateTab({ onCreated }: { onCreated: () => void }) {
           {STATUS_FLOW.map(s => <option key={s}>{s}</option>)}
         </select>
       </F>
+      {form.status === "On Hold" && (
+        <F label="Hold Warning / Reason" span2>
+          <textarea value={form.hold_reason} onChange={e => set("hold_reason", e.target.value)} placeholder="Explain why this shipment is on hold..." className="input min-h-[80px] h-auto py-2 resize-y" />
+        </F>
+      )}
       <div className="md:col-span-2 flex items-center gap-3 pt-2 border-t border-border">
         <button disabled={busy} className="inline-flex items-center gap-2 rounded-md bg-red px-5 py-2.5 text-sm font-semibold text-red-foreground disabled:opacity-60">
           <Plus className="h-4 w-4" /> Create Consignment
@@ -212,6 +218,7 @@ function ManageTab({ shipments, onChange }: { shipments: Shipment[]; onChange: (
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("");
+  const [holdReason, setHoldReason] = useState("");
   const [newMs, setNewMs] = useState({ location: "", status_text: "", timestamp: "" });
   const [busy, setBusy] = useState(false);
   const [modal, setModal] = useState<null | "edit" | "invoice" | "share" | "charges">(null);
@@ -223,13 +230,19 @@ function ManageTab({ shipments, onChange }: { shipments: Shipment[]; onChange: (
     if (!selectedId) { setMilestones([]); return; }
     listMilestones(selectedId).then(setMilestones);
     const s = shipments.find(x => x.id === selectedId);
-    if (s) setStatus(s.status);
+    if (s) {
+      setStatus(s.status);
+      setHoldReason(s.hold_reason ?? "");
+    }
   }, [selectedId, shipments]);
 
   async function updateStatus() {
     if (!shipment) return;
     setBusy(true);
-    await supabase.from("shipments").update({ status }).eq("id", shipment.id);
+    await supabase.from("shipments").update({
+      status,
+      hold_reason: status === "On Hold" ? (holdReason.trim() || null) : null,
+    }).eq("id", shipment.id);
     onChange(); setBusy(false);
   }
 
@@ -332,6 +345,18 @@ function ManageTab({ shipments, onChange }: { shipments: Shipment[]; onChange: (
                 </F>
                 <button onClick={updateStatus} disabled={busy} className="h-10 rounded-md bg-navy px-4 text-sm font-semibold text-navy-foreground">Update Status</button>
               </div>
+              {status === "On Hold" && (
+                <div className="mt-4 max-w-xl">
+                  <F label="Hold Warning / Reason">
+                    <textarea
+                      value={holdReason}
+                      onChange={e => setHoldReason(e.target.value)}
+                      placeholder="Explain why this shipment is on hold..."
+                      className="input min-h-[80px] h-auto py-2 resize-y"
+                    />
+                  </F>
+                </div>
+              )}
             </div>
 
             {modal === "edit" && <EditShipmentModal shipment={shipment} onClose={() => setModal(null)} onSaved={() => { setModal(null); onChange(); }} />}
@@ -661,6 +686,7 @@ function EditShipmentModal({ shipment, onClose, onSaved }: { shipment: Shipment;
     destination: shipment.destination,
     is_overseas: shipment.is_overseas,
     status: shipment.status,
+    hold_reason: shipment.hold_reason ?? "",
     weight_kg: shipment.weight_kg,
     estimated_delivery: shipment.estimated_delivery ?? "",
     booking_date: shipment.created_at ? shipment.created_at.slice(0, 10) : "",
@@ -676,6 +702,7 @@ function EditShipmentModal({ shipment, onClose, onSaved }: { shipment: Shipment;
       ...rest,
       tracking_number: f.tracking_number.toUpperCase(),
       estimated_delivery: f.estimated_delivery || null,
+      hold_reason: f.status === "On Hold" ? (f.hold_reason.trim() || null) : null,
     };
     if (booking_date) {
       const orig = shipment.created_at ? new Date(shipment.created_at) : new Date();
@@ -712,6 +739,11 @@ function EditShipmentModal({ shipment, onClose, onSaved }: { shipment: Shipment;
             {STATUS_FLOW.map(s => <option key={s}>{s}</option>)}
           </select>
         </F>
+        {f.status === "On Hold" && (
+          <F label="Hold Warning / Reason" span2>
+            <textarea value={f.hold_reason} onChange={e => set("hold_reason", e.target.value)} placeholder="Explain why this shipment is on hold..." className="input min-h-[80px] h-auto py-2 resize-y" />
+          </F>
+        )}
       </div>
       {err && <div className="mt-4 text-sm text-destructive font-semibold">{err}</div>}
       <div className="mt-6 flex items-center justify-end gap-2 border-t border-border pt-4">

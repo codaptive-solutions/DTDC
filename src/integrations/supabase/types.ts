@@ -86,6 +86,7 @@ export type Database = {
           scheduled_delivery_date: string | null
           sender_company: string
           status: string
+          hold_reason: string | null
           tracking_number: string
           weight_kg: number
         }
@@ -104,6 +105,7 @@ export type Database = {
           scheduled_delivery_date?: string | null
           sender_company: string
           status?: string
+          hold_reason?: string | null
           tracking_number: string
           weight_kg?: number
         }
@@ -122,6 +124,7 @@ export type Database = {
           scheduled_delivery_date?: string | null
           sender_company?: string
           status?: string
+          hold_reason?: string | null
           tracking_number?: string
           weight_kg?: number
         }

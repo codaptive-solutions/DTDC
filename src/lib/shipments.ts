@@ -9,6 +9,7 @@ export type Shipment = {
   destination: string;
   is_overseas: boolean;
   status: string;
+  hold_reason: string | null;
   weight_kg: number;
   estimated_delivery: string | null;
   requested_delivery_date: string | null;
