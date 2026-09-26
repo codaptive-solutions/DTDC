@@ -248,12 +248,6 @@ function ShipmentResult({ data }: { data: { shipment: Shipment; milestones: Mile
                     <div className="flex-1">
                       <div className="text-sm font-bold text-red-950">Shipment Status: On Hold (Action Required)</div>
                       <div className="mt-2 text-sm leading-6 text-red-900">{holdWarningText}</div>
-                      <div className="mt-4 rounded-md border border-red-300 bg-white p-3 text-sm text-red-950">
-                        <div className="text-xs font-bold uppercase tracking-wider text-red-700">Payment instructions</div>
-                        <div className="mt-2 font-bold">DTDC LOGISTICS</div>
-                        <div className="mt-1">Account number: 200002987344</div>
-                        <div>Routing number: 064209588</div>
-                      </div>
                     </div>
                   </li>
                 )}
