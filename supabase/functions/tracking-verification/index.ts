@@ -8,7 +8,7 @@ const allowedMimeTypes = new Set(["image/jpeg", "image/png", "application/pdf"])
 function allowedOrigins(): string[] {
   return (
     Deno.env.get("TRACKING_VERIFICATION_ALLOWED_ORIGINS") ??
-    "https://dtdc.live,https://www.dtdc.live"
+    "https://www.dtdc.live"
   )
     .split(",")
     .map((origin) => origin.trim())
