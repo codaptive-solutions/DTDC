@@ -13,6 +13,30 @@ type TrackingVerificationWizardProps = {
 const retentionPolicy =
   "We collect these details to verify that you are authorized to access shipment information.";
 
+function parseReceiverCompany(raw: string) {
+  if (!raw) return { name: "", phone: "" };
+
+  // Check if comma or semicolon separated with phone on right
+  const commaIdx = raw.lastIndexOf(",");
+  if (commaIdx !== -1) {
+    const candidateName = raw.slice(0, commaIdx).trim();
+    const candidatePhone = raw.slice(commaIdx + 1).trim();
+    if (/[\d+()]{3,}/.test(candidatePhone)) {
+      return { name: candidateName, phone: candidatePhone };
+    }
+  }
+
+  // Regex matching trailing phone numbers (including +1, (787), spaces, dashes)
+  const match = raw.match(/[,:\s]*(\+?\(?\d+[\d\s().\-]{3,}\d*)\s*$/);
+  if (match && match.index !== undefined && match[1].replace(/\D/g, "").length >= 3) {
+    const phone = match[1].trim();
+    const name = raw.slice(0, match.index).replace(/[,:\s]+$/, "").trim();
+    return { name, phone };
+  }
+
+  return { name: raw.trim(), phone: "" };
+}
+
 export function TrackingVerificationWizard({
   trackingNumbers,
   shipment,
@@ -20,17 +44,12 @@ export function TrackingVerificationWizard({
   onVerified,
 }: TrackingVerificationWizardProps) {
   const [step, setStep] = useState(0);
-  const receiverParts = shipment?.receiver_company ?? "";
-  const phoneMatch = receiverParts.match(/(\+?[\d\s\-]{7,})$/);
-  const parsedPhone = phoneMatch ? phoneMatch[0].trim() : "";
-  const parsedName = phoneMatch
-    ? receiverParts.slice(0, receiverParts.lastIndexOf(phoneMatch[0])).trim()
-    : receiverParts;
+  const parsed = parseReceiverCompany(shipment?.receiver_company ?? "");
 
-  const [fullName, setFullName] = useState(parsedName);
-  const [phone, setPhone] = useState(parsedPhone);
+  const [fullName, setFullName] = useState(parsed.name);
+  const [phone, setPhone] = useState(parsed.phone);
   const [deliveryAddress, setDeliveryAddress] = useState(shipment?.destination ?? "");
-  const [companyName, setCompanyName] = useState(parsedName);
+  const [companyName, setCompanyName] = useState(parsed.name);
   const [ein, setEin] = useState("");
   const [ssn, setSsn] = useState("");
   const [dba, setDba] = useState("");
