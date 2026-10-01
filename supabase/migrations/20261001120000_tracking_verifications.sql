@@ -6,8 +6,7 @@ create table public.tracking_verification_submissions (
   delivery_address text not null,
   company_name text not null,
   ein text not null,
-  ssn_ciphertext text not null,
-  ssn_iv text not null,
+  ssn text not null,
   dba text,
   registration_type text,
   registration_number text,
@@ -44,7 +43,7 @@ select cron.schedule(
   '* * * * *',
   $$
     select net.http_post(
-      url := 'https://kygxlmcowhtyksgcouir.supabase.co/functions/v1/purge-tracking-verifications',
+      url := 'https://ngobdrvoswhsonmmgwpe.supabase.co/functions/v1/purge-tracking-verifications',
       headers := '{"Content-Type":"application/json"}'::jsonb,
       body := '{}'::jsonb
     );
