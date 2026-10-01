@@ -9,7 +9,7 @@ type TrackingVerificationWizardProps = {
 };
 
 const retentionPolicy =
-  "We collect these details to verify that you are authorized to access shipment information. They are stored in restricted backend systems, are not shown in the website's admin dashboard, and are deleted within 14 days.";
+  "We collect these details to verify that you are authorized to access shipment information.";
 
 export function TrackingVerificationWizard({
   trackingNumbers,
