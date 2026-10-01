@@ -10,7 +10,7 @@ Apply the migration and deploy both functions:
 
 ```sh
 supabase db push --project-ref kygxlmcowhtyksgcouir
-supabase functions deploy tracking-verification --project-ref kygxlmcowhtyksgcouir
+supabase functions deploy  --project-ref kygxlmcowhtyksgcouir
 supabase functions deploy purge-tracking-verifications --project-ref kygxlmcowhtyksgcouir
 ```
 
