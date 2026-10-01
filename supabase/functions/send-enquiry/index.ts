@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,42 +30,32 @@ serve(async (request) => {
       });
     }
 
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    const fromEmail = Deno.env.get("RESEND_FROM_EMAIL");
-    if (!resendApiKey || !fromEmail) {
-      throw new Error("RESEND_API_KEY and RESEND_FROM_EMAIL must be configured");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error("Supabase environment variables are missing");
     }
 
-    const email = {
-      from: fromEmail,
-      to: [String(payload.tradeType ?? "").toLowerCase().includes("overseas") ? "overseas@dtdc.live" : "help@dtdc.live"],
-      reply_to: String(payload.businessEmail).trim(),
-      subject: `Merchant Enquiry - ${String(payload.companyName).trim()}`,
-      text: [
-        `Full Name: ${String(payload.fullName).trim()}`,
-        `Business Email: ${String(payload.businessEmail).trim()}`,
-        `Company Name: ${String(payload.companyName).trim()}`,
-        `GSTIN / Tax ID: ${String(payload.taxId ?? "").trim()}`,
-        `Estimated Monthly Volume: ${String(payload.volume ?? "").trim()}`,
-        `Trade Type: ${String(payload.tradeType ?? "").trim()}`,
-        "",
-        `Requirement Details:\n${String(payload.details ?? "").trim()}`,
-      ].join("\n"),
-    };
-
-    const resendResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(email),
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
     });
 
-    if (!resendResponse.ok) {
-      const error = await resendResponse.text();
-      console.error("Resend error:", error);
-      return new Response(JSON.stringify({ error: "Email provider rejected the request" }), {
+    const { error: insertError } = await supabase
+      .from("merchant_enquiries")
+      .insert({
+        full_name: String(payload.fullName).trim(),
+        business_email: String(payload.businessEmail).trim(),
+        company_name: String(payload.companyName).trim(),
+        tax_id: payload.taxId ? String(payload.taxId).trim() : null,
+        volume: payload.volume ? String(payload.volume).trim() : null,
+        trade_type: payload.tradeType ? String(payload.tradeType).trim() : null,
+        details: payload.details ? String(payload.details).trim() : null,
+      });
+
+    if (insertError) {
+      console.error("Supabase insert error:", insertError);
+      return new Response(JSON.stringify({ error: "Failed to store enquiry in database" }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
