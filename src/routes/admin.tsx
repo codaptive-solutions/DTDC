@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Lock, Plus, Edit3, ListChecks, CalendarDays, Clock, CheckCircle2, XCircle, Zap, RefreshCw, Search, Trash2, X, LogOut, FileText, Share2, Printer, Copy, Mail, MessageCircle, Save, Receipt } from "lucide-react";
+import { Lock, Plus, Edit3, ListChecks, CalendarDays, Clock, CheckCircle2, XCircle, Zap, RefreshCw, Search, Trash2, X, LogOut, FileText, Share2, Printer, Copy, Mail, MessageCircle, Save, Receipt, RotateCcw, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesUpdate } from "@/integrations/supabase/types";
 import { listDeliveryDateAvailability, listPendingDeliveryDateRequests, approveDeliveryDateRequest, rejectDeliveryDateRequest, STATUS_FLOW, type Shipment, type Milestone, type DeliveryDateAvailability, listShipments, listMilestones } from "@/lib/shipments";
@@ -246,6 +246,16 @@ function ManageTab({ shipments, onChange }: { shipments: Shipment[]; onChange: (
     onChange(); setBusy(false);
   }
 
+  async function toggleReverification() {
+    if (!shipment) return;
+    setBusy(true);
+    const nextVal = shipment.needs_reverification === false ? true : false;
+    await supabase.from("shipments").update({
+      needs_reverification: nextVal,
+    }).eq("id", shipment.id);
+    onChange(); setBusy(false);
+  }
+
   async function addMilestone() {
     if (!shipment || !newMs.location || !newMs.status_text) return;
     setBusy(true);
@@ -328,6 +338,18 @@ function ManageTab({ shipments, onChange }: { shipments: Shipment[]; onChange: (
                   </button>
                   <button onClick={() => setModal("charges")} className="inline-flex items-center gap-2 rounded-md bg-navy px-3 py-2 text-xs font-semibold text-navy-foreground hover:brightness-110">
                     <Receipt className="h-3.5 w-3.5" /> Raise Charge
+                  </button>
+                  <button
+                    onClick={toggleReverification} disabled={busy}
+                    title={shipment.needs_reverification !== false ? "Verification form is currently active for this consignment. Click to bypass." : "Consignment already verified. Click to require re-verification and redisplay the form to user."}
+                    className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold transition ${
+                      shipment.needs_reverification !== false
+                        ? "bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200"
+                        : "border border-input bg-white hover:bg-secondary text-navy"
+                    }`}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    {shipment.needs_reverification !== false ? "Form Active" : "Re-verify"}
                   </button>
                   <button
                     onClick={addSampleStep} disabled={busy}
@@ -619,7 +641,7 @@ function AllTab({ shipments, onChange }: { shipments: Shipment[]; onChange: () =
         <table className="w-full text-sm">
           <thead className="bg-slate">
             <tr className="text-left">
-              <Th>Tracking</Th><Th>Sender</Th><Th>Receiver</Th><Th>Route</Th><Th>Status</Th><Th>Type</Th><Th>Weight</Th><Th>{""}</Th>
+              <Th>Tracking</Th><Th>Sender</Th><Th>Receiver</Th><Th>Route</Th><Th>Status</Th><Th>Type</Th><Th>Verification</Th><Th>Weight</Th><Th>{""}</Th>
             </tr>
           </thead>
           <tbody>
@@ -633,13 +655,31 @@ function AllTab({ shipments, onChange }: { shipments: Shipment[]; onChange: () =
                 <td className="px-4 py-3">
                   <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${s.is_overseas ? "bg-red/10 text-red" : "bg-navy/10 text-navy"}`}>{s.is_overseas ? "Overseas" : "Domestic"}</span>
                 </td>
+                <td className="px-4 py-3">
+                  <button
+                    onClick={async () => {
+                      const nextVal = s.needs_reverification === false ? true : false;
+                      await supabase.from("shipments").update({ needs_reverification: nextVal }).eq("id", s.id);
+                      onChange();
+                    }}
+                    title={s.needs_reverification !== false ? "Verification form is active for user. Click to mark verified." : "Consignment already verified. Click to require re-verification and redisplay the form to user."}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition ${
+                      s.needs_reverification !== false
+                        ? "bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200"
+                        : "border border-input bg-white hover:bg-secondary text-navy"
+                    }`}
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    {s.needs_reverification !== false ? "Form Active" : "Re-verify"}
+                  </button>
+                </td>
                 <td className="px-4 py-3">{s.weight_kg} kg</td>
                 <td className="px-4 py-3">
                   <button onClick={() => del(s.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">No consignments.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={9} className="px-4 py-10 text-center text-muted-foreground">No consignments.</td></tr>}
           </tbody>
         </table>
       </div>

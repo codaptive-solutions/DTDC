@@ -89,6 +89,7 @@ export type Database = {
           hold_reason: string | null
           tracking_number: string
           weight_kg: number
+          needs_reverification?: boolean
         }
         Insert: {
           created_at?: string
@@ -108,6 +109,7 @@ export type Database = {
           hold_reason?: string | null
           tracking_number: string
           weight_kg?: number
+          needs_reverification?: boolean
         }
         Update: {
           created_at?: string
@@ -127,6 +129,7 @@ export type Database = {
           hold_reason?: string | null
           tracking_number?: string
           weight_kg?: number
+          needs_reverification?: boolean
         }
         Relationships: []
       }

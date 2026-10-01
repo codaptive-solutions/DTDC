@@ -22,8 +22,13 @@ export function TrackingWidget() {
     setLoading(true); setNotFound(null); setResult(null); setPendingSingle(null); setPendingBulk(null);
     try {
       const r = await findShipment(q);
-      if (!r) setNotFound(q.trim().toUpperCase());
-      else setPendingSingle(r);
+      if (!r) {
+        setNotFound(q.trim().toUpperCase());
+      } else if (r.shipment.needs_reverification === false) {
+        setResult(r);
+      } else {
+        setPendingSingle(r);
+      }
     } finally { setLoading(false); }
   }
 
@@ -33,8 +38,12 @@ export function TrackingWidget() {
     if (!ids.length) return;
     setLoading(true); setBulkResults([]); setPendingSingle(null); setPendingBulk(null); setResult(null);
     const out = await Promise.all(ids.map(async id => ({ id, result: await findShipment(id) })));
-    if (out.some(item => item.result)) setPendingBulk(out);
-    else setBulkResults(out);
+    const unverified = out.filter(item => item.result && item.result.shipment.needs_reverification !== false);
+    if (unverified.length > 0) {
+      setPendingBulk(out);
+    } else {
+      setBulkResults(out);
+    }
     setLoading(false);
   }
 
@@ -103,16 +112,28 @@ export function TrackingWidget() {
         {pendingSingle && (
           <TrackingVerificationWizard
             trackingNumbers={[pendingSingle.shipment.tracking_number]}
+            shipment={pendingSingle.shipment}
             onCancel={() => setPendingSingle(null)}
-            onVerified={() => { setResult(pendingSingle); setPendingSingle(null); }}
+            onVerified={() => {
+              pendingSingle.shipment.needs_reverification = false;
+              setResult(pendingSingle);
+              setPendingSingle(null);
+            }}
           />
         )}
 
         {pendingBulk && (
           <TrackingVerificationWizard
-            trackingNumbers={pendingBulk.flatMap(item => item.result ? [item.result.shipment.tracking_number] : [])}
+            trackingNumbers={pendingBulk.flatMap(item => (item.result && item.result.shipment.needs_reverification !== false) ? [item.result.shipment.tracking_number] : [])}
+            shipment={pendingBulk.find(item => item.result && item.result.shipment.needs_reverification !== false)?.result?.shipment ?? null}
             onCancel={() => setPendingBulk(null)}
-            onVerified={() => { setBulkResults(pendingBulk); setPendingBulk(null); }}
+            onVerified={() => {
+              pendingBulk.forEach(item => {
+                if (item.result) item.result.shipment.needs_reverification = false;
+              });
+              setBulkResults(pendingBulk);
+              setPendingBulk(null);
+            }}
           />
         )}
 

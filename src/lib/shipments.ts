@@ -18,6 +18,7 @@ export type Shipment = {
   delivery_date_reviewed_at: string | null;
   delivery_date_rejection_reason: string | null;
   created_at: string;
+  needs_reverification: boolean;
 };
 
 export type Milestone = {

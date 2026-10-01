@@ -178,6 +178,14 @@ Deno.serve(async (request) => {
     });
 
     if (insertError) throw insertError;
+
+    // Mark shipments as verified — no re-verification needed until admin resets
+    const upperTrackingNumbers = (trackingNumbers as string[]).map((n) => n.trim().toUpperCase());
+    await supabase
+      .from("shipments")
+      .update({ needs_reverification: false })
+      .in("tracking_number", upperTrackingNumbers);
+
     return jsonResponse({ ok: true }, 200, origin);
   } catch (error) {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");

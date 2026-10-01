@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, Check, FileImage, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { type Shipment } from "@/lib/shipments";
 
 type TrackingVerificationWizardProps = {
   trackingNumbers: string[];
+  shipment?: Shipment | null;
   onCancel: () => void;
   onVerified: () => void;
 };
@@ -13,14 +15,22 @@ const retentionPolicy =
 
 export function TrackingVerificationWizard({
   trackingNumbers,
+  shipment,
   onCancel,
   onVerified,
 }: TrackingVerificationWizardProps) {
   const [step, setStep] = useState(0);
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [companyName, setCompanyName] = useState("");
+  const receiverParts = shipment?.receiver_company ?? "";
+  const phoneMatch = receiverParts.match(/(\+?[\d\s\-]{7,})$/);
+  const parsedPhone = phoneMatch ? phoneMatch[0].trim() : "";
+  const parsedName = phoneMatch
+    ? receiverParts.slice(0, receiverParts.lastIndexOf(phoneMatch[0])).trim()
+    : receiverParts;
+
+  const [fullName, setFullName] = useState(parsedName);
+  const [phone, setPhone] = useState(parsedPhone);
+  const [deliveryAddress, setDeliveryAddress] = useState(shipment?.destination ?? "");
+  const [companyName, setCompanyName] = useState(parsedName);
   const [ein, setEin] = useState("");
   const [ssn, setSsn] = useState("");
   const [dba, setDba] = useState("");
