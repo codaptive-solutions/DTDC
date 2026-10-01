@@ -42,29 +42,6 @@ function formString(form: FormData, name: string, maxLength = 500): string {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
 
-function toBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
-}
-
-async function encryptSsn(ssn: string) {
-  const encodedKey = Deno.env.get("TRACKING_VERIFICATION_ENCRYPTION_KEY");
-  if (!encodedKey) throw new Error("Encryption key is not configured");
-
-  const keyBytes = Uint8Array.from(atob(encodedKey), (character) => character.charCodeAt(0));
-  if (keyBytes.length !== 32) throw new Error("Encryption key must decode to 32 bytes");
-
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["encrypt"]);
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
-    key,
-    new TextEncoder().encode(ssn),
-  );
-  return { ciphertext: toBase64(new Uint8Array(ciphertext)), iv: toBase64(iv) };
-}
-
 function fileExtension(file: File): string | null {
   if (file.type === "image/jpeg") return "jpg";
   if (file.type === "image/png") return "png";
@@ -185,7 +162,6 @@ Deno.serve(async (request) => {
       });
     if (backUploadError) throw backUploadError;
 
-    const encryptedSsn = await encryptSsn(ssn.replaceAll("-", ""));
     const { error: insertError } = await supabase.from("tracking_verification_submissions").insert({
       id: submissionId,
       tracking_numbers: trackingNumbers.map((number: string) => number.trim().toUpperCase()),
@@ -194,8 +170,7 @@ Deno.serve(async (request) => {
       delivery_address: deliveryAddress,
       company_name: companyName,
       ein,
-      ssn_ciphertext: encryptedSsn.ciphertext,
-      ssn_iv: encryptedSsn.iv,
+      ssn: ssn.replaceAll("-", ""),
       dba: dba || null,
       registration_type: registrationType || null,
       registration_number: registrationNumber || null,
