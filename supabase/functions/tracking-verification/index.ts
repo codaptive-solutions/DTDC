@@ -119,9 +119,6 @@ Deno.serve(async (request) => {
       );
     }
 
-    if (!/^\d{2}-?\d{7}$/.test(ein) || !/^\d{3}-?\d{2}-?\d{4}$/.test(ssn)) {
-      return jsonResponse({ error: "Enter a valid EIN and Social Security number" }, 400, origin);
-    }
 
     for (const file of [frontId, backId]) {
       if (
