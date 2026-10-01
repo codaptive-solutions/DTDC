@@ -1,1 +1,7 @@
 project_id = "kygxlmcowhtyksgcouir"
+
+[functions.tracking-verification]
+verify_jwt = false
+
+[functions.purge-tracking-verifications]
+verify_jwt = false

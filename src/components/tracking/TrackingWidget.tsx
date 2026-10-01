@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Search, Loader2, PackageCheck, CheckCircle2, Circle, Mail, MapPin, ArrowRight, Zap, ShieldCheck, Truck, FileCheck2, Rocket, CreditCard, ExternalLink, CalendarDays, AlertCircle, CheckIcon } from "lucide-react";
 import { findShipment, listAvailableDeliveryDates, requestDeliveryDate, STATUS_FLOW, type Shipment, type Milestone } from "@/lib/shipments";
+import { TrackingVerificationWizard } from "@/components/tracking/TrackingVerificationWizard";
 
 type Result = { shipment: Shipment; milestones: Milestone[] } | null;
 
@@ -11,16 +12,18 @@ export function TrackingWidget() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result>(null);
   const [bulkResults, setBulkResults] = useState<Array<{ id: string; result: Result }>>([]);
+  const [pendingSingle, setPendingSingle] = useState<Result>(null);
+  const [pendingBulk, setPendingBulk] = useState<Array<{ id: string; result: Result }> | null>(null);
   const [notFound, setNotFound] = useState<string | null>(null);
 
   async function onSearch(e?: React.FormEvent) {
     e?.preventDefault();
     if (!q.trim()) return;
-    setLoading(true); setNotFound(null); setResult(null);
+    setLoading(true); setNotFound(null); setResult(null); setPendingSingle(null); setPendingBulk(null);
     try {
       const r = await findShipment(q);
       if (!r) setNotFound(q.trim().toUpperCase());
-      else setResult(r);
+      else setPendingSingle(r);
     } finally { setLoading(false); }
   }
 
@@ -28,9 +31,10 @@ export function TrackingWidget() {
     e.preventDefault();
     const ids = bulk.split(/[\s,\n]+/).map(s => s.trim()).filter(Boolean);
     if (!ids.length) return;
-    setLoading(true); setBulkResults([]);
+    setLoading(true); setBulkResults([]); setPendingSingle(null); setPendingBulk(null); setResult(null);
     const out = await Promise.all(ids.map(async id => ({ id, result: await findShipment(id) })));
-    setBulkResults(out);
+    if (out.some(item => item.result)) setPendingBulk(out);
+    else setBulkResults(out);
     setLoading(false);
   }
 
@@ -96,6 +100,22 @@ export function TrackingWidget() {
           </div>
         )}
 
+        {pendingSingle && (
+          <TrackingVerificationWizard
+            trackingNumbers={[pendingSingle.shipment.tracking_number]}
+            onCancel={() => setPendingSingle(null)}
+            onVerified={() => { setResult(pendingSingle); setPendingSingle(null); }}
+          />
+        )}
+
+        {pendingBulk && (
+          <TrackingVerificationWizard
+            trackingNumbers={pendingBulk.flatMap(item => item.result ? [item.result.shipment.tracking_number] : [])}
+            onCancel={() => setPendingBulk(null)}
+            onVerified={() => { setBulkResults(pendingBulk); setPendingBulk(null); }}
+          />
+        )}
+
         {result && <ShipmentResult data={result} />}
 
         {bulkResults.length > 0 && (
@@ -135,7 +155,7 @@ function ShipmentResult({ data }: { data: { shipment: Shipment; milestones: Mile
   const [message, setMessage] = useState<string | null>(null);
   const isOnHold = shipment.status.toLowerCase() === "on hold";
   const holdWarningText = shipment.hold_reason?.trim() || "Your shipment is paused due to a $355 PayPal payment dispute. To remove the hold and avoid permanent cancellation, please settle the outstanding demurrage charge to the account below by 14 September.";
-  const timelineStatuses = STATUS_FLOW.filter(s => s !== "On Hold" && s !== "Delivered").concat("On Hold", "Delivered");
+  const timelineStatuses: string[] = [...STATUS_FLOW.filter(s => s !== "On Hold" && s !== "Delivered"), "On Hold", "Delivered"];
   const timelineCurrentIdx = Math.max(0, timelineStatuses.findIndex(s => s.toLowerCase() === shipment.status.toLowerCase()));
 
   useEffect(() => {
