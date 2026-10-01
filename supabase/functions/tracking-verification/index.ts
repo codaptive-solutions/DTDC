@@ -189,10 +189,13 @@ Deno.serve(async (request) => {
       const paths = [frontPath, backPath].filter(Boolean);
       await supabase.storage.from(bucketName).remove(paths);
     }
-    console.error(
-      "tracking-verification submission failed",
-      error instanceof Error ? error.message : "unknown error",
-    );
+    const errMsg =
+      error instanceof Error
+        ? error.message
+        : typeof error === "object" && error !== null
+          ? JSON.stringify(error)
+          : String(error);
+    console.error("tracking-verification submission failed:", errMsg);
     return jsonResponse({ error: "Unable to submit verification. Please try again." }, 500, origin);
   }
 });

@@ -64,6 +64,7 @@ export function TrackingVerificationWizard({
         body: formData,
       });
       if (submitError) throw submitError;
+      window.scrollTo({ top: 0, behavior: "smooth" });
       onVerified();
     } catch (submitError) {
       setError(
